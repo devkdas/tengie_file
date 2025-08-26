@@ -1,0 +1,38 @@
+name: Download Latest Tengine
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  download-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download and Rename Tengine
+        run: |
+          echo "Fetching latest download link from tengine.taobao.org..."
+          LATEST_URL_PATH=$(curl -s https://tengine.taobao.org/download.html | grep -oP 'href="download/tengine-[0-9\.]+\.tar\.gz"' | head -n 1 | sed -e 's/href="\(.*\)"/\1/')
+          
+          if [ -z "$LATEST_URL_PATH" ]; then
+            echo "Error: Could not find the download link."
+            exit 1
+          fi
+
+          FULL_URL="https://tengine.taobao.org/${LATEST_URL_PATH}"
+          echo "Latest version URL: $FULL_URL"
+          
+          wget --no-verbose "$FULL_URL" -O tengine_latest.tar.gz
+          echo "Download complete."
+
+      - name: Commit and push if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Update latest Tengine image"
+          file_pattern: tengine_latest.tar.gz
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "github-actions-bot@users.noreply.github.com"
+          commit_author: "GitHub Actions Bot <github-actions-bot@users.noreply.github.com>"
